@@ -1,6 +1,9 @@
 import { Button, Modal, Stack, Text, Box } from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import {
+  BrowserMultiFormatReader,
+  type IScannerControls,
+} from "@zxing/browser";
 
 interface ScanDialogProps {
   opened: boolean;
@@ -15,16 +18,32 @@ const ScanDialog = (props: ScanDialogProps) => {
   );
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mediaStreamRef = useRef<IScannerControls | null>(null);
 
   useEffect(() => {
     if (opened) {
       const reader = new BrowserMultiFormatReader();
       setCodeReader(reader);
     } else {
-      setIsScanning(false);
-      setError(null);
+      // Clean up when dialog closes
+      stopScanning();
     }
   }, [opened]);
+
+  const stopScanning = () => {
+    // Stop the media stream tracks to turn off camera
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.stop();
+      mediaStreamRef.current = null;
+    }
+
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setIsScanning(false);
+  };
 
   const startScanning = async () => {
     if (!codeReader || !videoRef.current) return;
@@ -33,15 +52,15 @@ const ScanDialog = (props: ScanDialogProps) => {
       setIsScanning(true);
       setError(null);
 
-      // Start scanning
-      await codeReader.decodeFromVideoDevice(
+      // Start scanning and store the media stream
+      const stream = await codeReader.decodeFromVideoDevice(
         undefined, // Use default camera
         videoRef.current,
         (result, error) => {
           if (result) {
             console.log("Barcode detected:", result.getText());
-            // Handle successful scan here
             alert(`Barcode detected: ${result.getText()}`);
+            stopScanning();
             onClose();
           }
           if (error && !(error instanceof Error)) {
@@ -49,15 +68,12 @@ const ScanDialog = (props: ScanDialogProps) => {
           }
         }
       );
+
+      // Store the media stream for cleanup
+      mediaStreamRef.current = stream;
     } catch (err) {
       console.error("Camera error:", err);
       setError("Failed to access camera. Please check permissions.");
-      setIsScanning(false);
-    }
-  };
-
-  const stopScanning = () => {
-    if (codeReader) {
       setIsScanning(false);
     }
   };
