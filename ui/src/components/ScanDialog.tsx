@@ -18,6 +18,7 @@ const ScanDialog = (props: ScanDialogProps) => {
   );
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const mediaStreamRef = useRef<IScannerControls | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ const ScanDialog = (props: ScanDialogProps) => {
     }
 
     setIsScanning(false);
+    setDebugInfo("");
   };
 
   const startScanning = async () => {
@@ -51,30 +53,43 @@ const ScanDialog = (props: ScanDialogProps) => {
     try {
       setIsScanning(true);
       setError(null);
+      setDebugInfo("Starting camera...");
+
+      //   const constraints = {
+      //     video: {
+      //         width: { ideal: 1280 },
+      //         height: { ideal: 720 },
+      //         facingMode: "environment",
+      //     }
+      //   };
 
       // Start scanning and store the media stream
-      const stream = await codeReader.decodeFromVideoDevice(
-        undefined, // Use default camera
+      const controls = await codeReader.decodeFromVideoDevice(
+        undefined,
         videoRef.current,
         (result, error) => {
           if (result) {
             console.log("Barcode detected:", result.getText());
+            setDebugInfo(`Barcode detected: ${result.getText()}`);
             alert(`Barcode detected: ${result.getText()}`);
             stopScanning();
             onClose();
           }
           if (error && !(error instanceof Error)) {
             console.log("Scan error:", error);
+            setDebugInfo(`Scan error: ${error}`);
           }
         }
       );
 
       // Store the media stream for cleanup
-      mediaStreamRef.current = stream;
+      mediaStreamRef.current = controls;
+      setDebugInfo("Camera started successfully.");
     } catch (err) {
       console.error("Camera error:", err);
       setError("Failed to access camera. Please check permissions.");
       setIsScanning(false);
+      setDebugInfo(`Camera error: ${err}`);
     }
   };
 
@@ -93,6 +108,10 @@ const ScanDialog = (props: ScanDialogProps) => {
     >
       <Stack gap="md">
         <Text>Position your book's barcode within the camera view.</Text>
+        <Text size="sm" c="dimmed">
+          Make sure the barcode is well-lit and clearly visible. Try different
+          angles and distances.
+        </Text>
 
         <Box
           style={{
@@ -109,6 +128,7 @@ const ScanDialog = (props: ScanDialogProps) => {
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             playsInline
             muted
+            autoPlay
           />
           {!isScanning && (
             <Box
@@ -123,6 +143,18 @@ const ScanDialog = (props: ScanDialogProps) => {
             >
               <Text>Camera preview will appear here</Text>
             </Box>
+          )}
+
+          {debugInfo && (
+            <Text size="sm" c="blue">
+              {debugInfo}
+            </Text>
+          )}
+
+          {error && (
+            <Text c="red" size="sm">
+              {error}
+            </Text>
           )}
         </Box>
 
@@ -146,6 +178,10 @@ const ScanDialog = (props: ScanDialogProps) => {
           <Button onClick={handleClose} variant="outline" fullWidth>
             Cancel
           </Button>
+          <Text size="xs" c="dimmed">
+            Supported formats: QR Code, EAN-13, EAN-8, UPC-A, UPC-E, Code 128,
+            Code 39
+          </Text>
         </Stack>
       </Stack>
     </Modal>
