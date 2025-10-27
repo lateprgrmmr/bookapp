@@ -32,11 +32,11 @@ const ScanDialog = (props: ScanDialogProps) => {
   }, [opened]);
 
   const stopScanning = () => {
-    // Stop the media stream tracks to turn off camera
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.stop();
-      mediaStreamRef.current = null;
-    }
+    // // Stop the media stream tracks to turn off camera
+    // if (mediaStreamRef.current) {
+    //   mediaStreamRef.current.stop();
+    //   mediaStreamRef.current = null;
+    // }
 
     // Clear video element
     if (videoRef.current) {
@@ -55,16 +55,8 @@ const ScanDialog = (props: ScanDialogProps) => {
       setError(null);
       setDebugInfo("Starting camera...");
 
-      //   const constraints = {
-      //     video: {
-      //         width: { ideal: 1280 },
-      //         height: { ideal: 720 },
-      //         facingMode: "environment",
-      //     }
-      //   };
-
       // Start scanning and store the media stream
-      const controls = await codeReader.decodeFromVideoDevice(
+      const result = await codeReader.decodeFromVideoDevice(
         undefined,
         videoRef.current,
         (result, error) => {
@@ -75,15 +67,15 @@ const ScanDialog = (props: ScanDialogProps) => {
             stopScanning();
             onClose();
           }
-          if (error && !(error instanceof Error)) {
+          if (error) {
             console.log("Scan error:", error);
-            setDebugInfo(`Scan error: ${error}`);
+            setDebugInfo(`Scan error: ${error.message || error}`);
           }
         }
       );
 
       // Store the media stream for cleanup
-      mediaStreamRef.current = controls;
+      mediaStreamRef.current = result;
       setDebugInfo("Camera started successfully.");
     } catch (err) {
       console.error("Camera error:", err);
@@ -163,7 +155,6 @@ const ScanDialog = (props: ScanDialogProps) => {
             {error}
           </Text>
         )}
-
         <Stack gap="sm">
           {!isScanning ? (
             <Button onClick={startScanning} fullWidth>
