@@ -1,21 +1,16 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import Router from './routes';
-import './styles/vendors.scss';
+import { MantineProvider } from "@mantine/core";
+import Home from "./components/Home";
+import { StrictMode } from "react";
+import "@mantine/core/styles.css";
 
-const App = () => (
-  <main>
-    <p>App Works!</p>
-    <ul>
-      <li>
-        <Link to="/">Home</Link>
-      </li>
-      <li>
-        <Link to="/about">About</Link>
-      </li>
-    </ul>
-    <Router />
-  </main>
-);
+function App() {
+  return (
+    <StrictMode>
+      <MantineProvider>
+        <Home />
+      </MantineProvider>
+    </StrictMode>
+  );
+}
 
 export default App;
