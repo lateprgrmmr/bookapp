@@ -1,182 +1,117 @@
-import { Button, Modal, Stack, Text, Box } from "@mantine/core";
-import { useEffect, useRef, useState } from "react";
-import {
-  BrowserMultiFormatReader,
-  type IScannerControls,
-} from "@zxing/browser";
+import React, { useRef, useEffect, useCallback } from "react";
+import { Modal } from "@mantine/core";
+import type {
+  BarcodeScannerResultWithSize,
+  BarcodeScannerViewConfiguration,
+  IBarcodeScannerHandle,
+} from "scanbot-web-sdk/@types";
+import SBSDKService, { ContainerId } from "../service/SBSDKService";
 
 interface ScanDialogProps {
   opened: boolean;
   onClose: () => void;
+  onBarcodeScanned?: (barcodeText: string) => void;
 }
 
-const ScanDialog = (props: ScanDialogProps) => {
-  const { opened, onClose } = props;
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [codeReader, setCodeReader] = useState<BrowserMultiFormatReader | null>(
-    null
+export default function ScanDialog(props: ScanDialogProps) {
+  const { opened, onClose, onBarcodeScanned } = props;
+  const handle = useRef<IBarcodeScannerHandle | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [barcodeResult, setBarcodeResult] = React.useState<string | undefined>(
+    undefined
   );
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<string>("");
-  const mediaStreamRef = useRef<IScannerControls | null>(null);
+
+  const onBarcodesDetected = useCallback(
+    (result: BarcodeScannerResultWithSize) => {
+      let text = "";
+      result.barcodes.forEach((barcode) => {
+        text += `${barcode.text} (${barcode.format})\n`;
+      });
+      setBarcodeResult(text);
+
+      if (onBarcodeScanned && result.barcodes.length > 0) {
+        onBarcodeScanned(result.barcodes[0].text);
+      }
+
+      // Close the dialog after successful scan
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    },
+    [onClose]
+  );
 
   useEffect(() => {
-    if (opened) {
-      const reader = new BrowserMultiFormatReader();
-      setCodeReader(reader);
-    } else {
-      // Clean up when dialog closes
-      stopScanning();
-    }
-  }, [opened]);
-
-  const stopScanning = () => {
-    // // Stop the media stream tracks to turn off camera
-    // if (mediaStreamRef.current) {
-    //   mediaStreamRef.current.stop();
-    //   mediaStreamRef.current = null;
-    // }
-
-    // Clear video element
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+    if (!opened) {
+      handle.current?.dispose();
+      handle.current = null;
+      return;
     }
 
-    setIsScanning(false);
-    setDebugInfo("");
-  };
+    const initScanner = async () => {
+      if (!containerRef.current) {
+        console.error("container not found");
+        return;
+      }
 
-  const startScanning = async () => {
-    if (!codeReader || !videoRef.current) return;
+      try {
+        await SBSDKService.initialize();
 
-    try {
-      setIsScanning(true);
-      setError(null);
-      setDebugInfo("Starting camera...");
+        const config: BarcodeScannerViewConfiguration = {
+          containerId: ContainerId.BarcodeScanner,
+          onBarcodesDetected: onBarcodesDetected,
+          detectionParameters: {
+            returnBarcodeImage: true,
+          },
+        };
 
-      // Start scanning and store the media stream
-      const result = await codeReader.decodeFromVideoDevice(
-        undefined,
-        videoRef.current,
-        (result, error) => {
-          if (result) {
-            console.log("Barcode detected:", result.getText());
-            setDebugInfo(`Barcode detected: ${result.getText()}`);
-            alert(`Barcode detected: ${result.getText()}`);
-            stopScanning();
-            onClose();
-          }
-          if (error) {
-            console.log("Scan error:", error);
-            setDebugInfo(`Scan error: ${error.message || error}`);
-          }
-        }
-      );
+        handle.current = await SBSDKService.SDK.createBarcodeScanner(config);
+        console.log("Scanbot SDK barcode scanner is ready...");
+      } catch (error) {
+        console.error("failed to initialize scanner...");
+      }
+    };
 
-      // Store the media stream for cleanup
-      mediaStreamRef.current = result;
-      setDebugInfo("Camera started successfully.");
-    } catch (err) {
-      console.error("Camera error:", err);
-      setError("Failed to access camera. Please check permissions.");
-      setIsScanning(false);
-      setDebugInfo(`Camera error: ${err}`);
-    }
-  };
+    const timer = setTimeout(() => {
+      initScanner();
+    }, 100);
 
-  const handleClose = () => {
-    stopScanning();
-    onClose();
-  };
+    return () => {
+      clearTimeout(timer);
+      handle.current?.dispose();
+      handle.current = null;
+    };
+  }, [opened, onBarcodesDetected]);
+
+  // const fetch;
 
   return (
     <Modal
       opened={opened}
-      onClose={handleClose}
-      title="Scan Book Barcode"
-      centered
+      onClose={onClose}
+      title="Scan Barcode"
       size="lg"
+      centered
     >
-      <Stack gap="md">
-        <Text>Position your book's barcode within the camera view.</Text>
-        <Text size="sm" c="dimmed">
-          Make sure the barcode is well-lit and clearly visible. Try different
-          angles and distances.
-        </Text>
-
-        <Box
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "300px",
-            backgroundColor: "#f0f0f0",
-            borderRadius: "8px",
-            overflow: "hidden",
-          }}
+      <div
+        ref={containerRef}
+        id={ContainerId.BarcodeScanner}
+        style={{
+          width: "100%",
+          height: "500px",
+          position: "relative",
+          minHeight: "500px",
+          backgroundColor: "#000", // Add background so you can see the container
+        }}
+      />
+      {barcodeResult && (
+        <div
+          style={{ marginTop: "1rem", padding: "1rem", background: "#e7f5ff" }}
         >
-          <video
-            ref={videoRef}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            playsInline
-            muted
-            autoPlay
-          />
-          {!isScanning && (
-            <Box
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                textAlign: "center",
-                color: "#666",
-              }}
-            >
-              <Text>Camera preview will appear here</Text>
-            </Box>
-          )}
-
-          {debugInfo && (
-            <Text size="sm" c="blue">
-              {debugInfo}
-            </Text>
-          )}
-
-          {error && (
-            <Text c="red" size="sm">
-              {error}
-            </Text>
-          )}
-        </Box>
-
-        {error && (
-          <Text c="red" size="sm">
-            {error}
-          </Text>
-        )}
-        <Stack gap="sm">
-          {!isScanning ? (
-            <Button onClick={startScanning} fullWidth>
-              Start Scanning
-            </Button>
-          ) : (
-            <Button onClick={stopScanning} variant="outline" fullWidth>
-              Stop Scanning
-            </Button>
-          )}
-
-          <Button onClick={handleClose} variant="outline" fullWidth>
-            Cancel
-          </Button>
-          <Text size="xs" c="dimmed">
-            Supported formats: QR Code, EAN-13, EAN-8, UPC-A, UPC-E, Code 128,
-            Code 39
-          </Text>
-        </Stack>
-      </Stack>
+          <strong>Scanned:</strong>
+          <pre>{barcodeResult}</pre>
+        </div>
+      )}
     </Modal>
   );
-};
-
-export default ScanDialog;
+}

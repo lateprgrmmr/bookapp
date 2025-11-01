@@ -7,6 +7,7 @@ function App() {
   return (
     <StrictMode>
       <MantineProvider>
+        <div>Hello???</div>
         <Home />
       </MantineProvider>
     </StrictMode>

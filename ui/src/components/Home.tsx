@@ -49,7 +49,15 @@ import ScanDialog from "./ScanDialog";
 // ];
 
 function Home() {
-  const [scanDialogOpened, setScanDialogOpened] = useState(false);
+  const [scanDialogOpened, setScanDialogOpened] = useState<boolean>(false);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+
+  const handleBarcodeScanned = (barcodeText: string) => {
+    setScannedBarcode(barcodeText);
+
+    console.log("barcode scanned", barcodeText);
+  };
+
   const openScanDialog = () => {
     setScanDialogOpened(true);
   };
@@ -69,8 +77,13 @@ function Home() {
           Scan Book
         </Button>
         <Text>Scan the barcode of your book to add it to your library.</Text>
+        {scannedBarcode && <Text>Last scanned: {scannedBarcode}</Text>}
       </Stack>
-      <ScanDialog opened={scanDialogOpened} onClose={closeScanDialog} />
+      <ScanDialog
+        opened={scanDialogOpened}
+        onClose={closeScanDialog}
+        onBarcodeScanned={handleBarcodeScanned}
+      />
     </div>
   );
 }
