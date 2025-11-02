@@ -5,57 +5,33 @@ import {
   Title,
   Stack,
   Button,
+  TextInput,
 } from "@mantine/core";
 import { useState } from "react";
 import { FiCamera } from "react-icons/fi";
 import ScanDialog from "./ScanDialog";
-
-// interface Book {
-//   id: number;
-//   title: string;
-//   author: string;
-//   year: number;
-// }
-
-// const mockNewBooks: Book[] = [
-//   { id: 1, title: "The Midnight Library", author: "Matt Haig", year: 2020 },
-//   { id: 2, title: "Project Hail Mary", author: "Andy Weir", year: 2021 },
-//   {
-//     id: 3,
-//     title: "The Seven Husbands of Evelyn Hugo",
-//     author: "Taylor Jenkins Reid",
-//     year: 2017,
-//   },
-//   { id: 4, title: "Klara and the Sun", author: "Kazuo Ishiguro", year: 2021 },
-//   { id: 5, title: "The Four Winds", author: "Kristin Hannah", year: 2021 },
-// ];
-
-// const mockSuggestedBooks: Book[] = [
-//   { id: 6, title: "Educated", author: "Tara Westover", year: 2018 },
-//   { id: 7, title: "Becoming", author: "Michelle Obama", year: 2018 },
-//   { id: 8, title: "Sapiens", author: "Yuval Noah Harari", year: 2014 },
-//   {
-//     id: 9,
-//     title: "The Silent Patient",
-//     author: "Alex Michaelides",
-//     year: 2019,
-//   },
-//   {
-//     id: 10,
-//     title: "Where the Crawdads Sing",
-//     author: "Delia Owens",
-//     year: 2018,
-//   },
-// ];
+import BookDetailsDialog from "./BookDetailsDialog";
+import { searchBookByISBN, searchBookByTitleOrKeyword } from "../actions/Book.action";
+import type { BookItem } from "../shared/types/book";
 
 function Home() {
   const [scanDialogOpened, setScanDialogOpened] = useState<boolean>(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [bookDetailsDialogOpened, setBookDetailsDialogOpened] = useState<boolean>(false);
+  const [books, setBooks] = useState<BookItem[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
+  const [isReset, setIsReset] = useState<boolean>(true);
 
-  const handleBarcodeScanned = (barcodeText: string) => {
-    setScannedBarcode(barcodeText);
-
-    console.log("barcode scanned", barcodeText);
+  const handleBarcodeScanned = async (barcodeText: string) => {
+    setScannedBarcode(scannedBarcode || barcodeText);
+    if (barcodeText) {
+      const books = await searchBookByISBN(barcodeText);
+      console.log(books);
+      if (books.length > 0) {
+        setBookDetailsDialogOpened(true);
+        setBooks(books);
+      }
+    }
   };
 
   const openScanDialog = () => {
@@ -64,6 +40,27 @@ function Home() {
   const closeScanDialog = () => {
     setScanDialogOpened(false);
   };
+  const closeBookDetailsDialog = () => {
+    setBookDetailsDialogOpened(false);
+    resetSearch();
+  };
+
+  const handleSearchBookByTitleOrKeyword = async () => {
+    const books = await searchBookByTitleOrKeyword(searchKeyword);
+    console.log(books);
+    if (books.length > 0) {
+      setBookDetailsDialogOpened(true);
+      setBooks(books);
+    }
+  };
+
+  const resetSearch = () => {
+    setSearchKeyword("");
+    setBooks([]);
+    setScannedBarcode(null);
+    setIsReset(true);
+  };
+
   return (
     <div>
       <Stack>
@@ -76,13 +73,24 @@ function Home() {
         >
           Scan Book
         </Button>
-        <Text>Scan the barcode of your book to add it to your library.</Text>
-        {scannedBarcode && <Text>Last scanned: {scannedBarcode}</Text>}
+        <Text>Scan the barcode of your book or search by title or keyword to add it to your library.</Text>
+        <TextInput
+          placeholder="Search by title or keyword"
+          value={searchKeyword}
+          onChange={(event) => setSearchKeyword(event.target.value)}
+        />
+        <Button onClick={handleSearchBookByTitleOrKeyword}>Search</Button>
       </Stack>
       <ScanDialog
         opened={scanDialogOpened}
         onClose={closeScanDialog}
         onBarcodeScanned={handleBarcodeScanned}
+      />
+      <BookDetailsDialog
+        isReset={isReset}
+        books={books}
+        opened={bookDetailsDialogOpened}
+        onClose={closeBookDetailsDialog}
       />
     </div>
   );

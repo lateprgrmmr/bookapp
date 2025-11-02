@@ -21,9 +21,10 @@ export default function ScanDialog(props: ScanDialogProps) {
     undefined
   );
 
-  const onBarcodesDetected = useCallback(
+  const onBarcodeDetected = useCallback(
     (result: BarcodeScannerResultWithSize) => {
       let text = "";
+      console.log("result", result);
       result.barcodes.forEach((barcode) => {
         text += `${barcode.text} (${barcode.format})\n`;
       });
@@ -38,7 +39,7 @@ export default function ScanDialog(props: ScanDialogProps) {
         onClose();
       }, 1000);
     },
-    [onClose]
+    [onClose, onBarcodeScanned]
   );
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function ScanDialog(props: ScanDialogProps) {
 
         const config: BarcodeScannerViewConfiguration = {
           containerId: ContainerId.BarcodeScanner,
-          onBarcodesDetected: onBarcodesDetected,
+          onBarcodesDetected: onBarcodeDetected,
           detectionParameters: {
             returnBarcodeImage: true,
           },
@@ -68,7 +69,7 @@ export default function ScanDialog(props: ScanDialogProps) {
         handle.current = await SBSDKService.SDK.createBarcodeScanner(config);
         console.log("Scanbot SDK barcode scanner is ready...");
       } catch (error) {
-        console.error("failed to initialize scanner...");
+        console.error("failed to initialize scanner...", error);
       }
     };
 
@@ -81,9 +82,7 @@ export default function ScanDialog(props: ScanDialogProps) {
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [opened, onBarcodesDetected]);
-
-  // const fetch;
+  }, [opened, onBarcodeDetected]);
 
   return (
     <Modal
@@ -101,7 +100,7 @@ export default function ScanDialog(props: ScanDialogProps) {
           height: "500px",
           position: "relative",
           minHeight: "500px",
-          backgroundColor: "#000", // Add background so you can see the container
+          backgroundColor: "#000",
         }}
       />
       {barcodeResult && (
