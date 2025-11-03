@@ -7,13 +7,18 @@ import type {
 
 export const searchBook = async (
   searchType: SearchTypeEnum,
-  searchQuery: string
+  searchQuery: string,
+  sortCriteria: string,
+  startIndex: number
 ): Promise<BookItem[]> => {
   if (!searchType || !searchQuery) {
     return [];
   }
   const booksResponse = await makeGetRequest<BookResponse>(
-    `/books/search?searchType=${searchType}&searchQuery=${searchQuery}`
+    `/books/search?searchType=${searchType}` +
+      `&searchQuery=${searchQuery}` +
+      `&sortCriteria=${sortCriteria}` +
+      `&startIndex=${startIndex}`
   );
   if (!booksResponse) {
     return [];

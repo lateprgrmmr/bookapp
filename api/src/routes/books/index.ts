@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { googleBooksRequest } from "../../utils/googleBooks";
-import { SearchTypeEnum } from "../../shared/types/book";
+import { SearchTypeEnum, SortCriteriaEnum } from "../../shared/types/book";
 
 const router = Router();
 
@@ -20,14 +20,27 @@ const getSearchOperator = (searchType: any) => {
 };
 
 router.get("/search", async (req, res) => {
-  const { searchType, searchQuery } = req.query;
+  const { searchType, searchQuery, sortCriteria, startIndex } = req.query;
+  let sortParam = SortCriteriaEnum.RELEVANCE;
+  let startIndexParam = 0;
+  if (startIndex) {
+    startIndexParam = parseInt(startIndex as string);
+  }
   if (!searchType || !searchQuery) {
     return res
       .status(400)
       .json({ error: "Search type and search query are required" });
   }
+  if (sortCriteria) {
+    sortParam = sortCriteria as SortCriteriaEnum;
+  }
   const encodedSearchQuery = encodeURIComponent(searchQuery as string);
-  const queryString = `${getSearchOperator(searchType)}${encodedSearchQuery}`;
+  const queryString =
+    `${getSearchOperator(searchType)}` +
+    `${encodedSearchQuery}` +
+    `&orderBy=${sortParam}` +
+    `&startIndex=${startIndexParam}` +
+    `&maxResults=10`;
 
   const booksResponse = await googleBooksRequest({
     method: "GET",

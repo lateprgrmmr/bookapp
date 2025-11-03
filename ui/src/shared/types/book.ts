@@ -112,3 +112,8 @@ export const SearchOperatorEnumLookup = {
   [SearchTypeEnum.KEYWORD]: "keyword",
   [SearchTypeEnum.AUTHOR]: "author",
 };
+
+export enum SortCriteriaEnum {
+  NEWEST = "newest",
+  RELEVANCE = "relevance",
+}

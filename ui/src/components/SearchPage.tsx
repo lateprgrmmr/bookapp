@@ -8,14 +8,21 @@ import {
   TextInput,
   Group,
   Radio,
+  Select,
+  Typography,
 } from "@mantine/core";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FiCamera } from "react-icons/fi";
 import ScanDialog from "./ScanDialog";
-import BookDetailsDialog from "./BookDetailsDialog";
 import { searchBook } from "../actions/Book.action";
-import { SearchTypeEnum, type BookItem } from "../shared/types/book";
+import {
+  SearchTypeEnum,
+  SortCriteriaEnum,
+  type BookItem,
+} from "../shared/types/book";
 import { useMantineTheme } from "@mantine/core";
+// import BookTable from "./BookTable";
+import BookDataTable from "./BookDataTable";
 
 function useStyles() {
   const theme = useMantineTheme();
@@ -27,7 +34,7 @@ function useStyles() {
       boxShadow: theme.shadows.md,
       border: `1px solid ${theme.colors.blue[6]}`,
       margin: theme.spacing.md,
-      maxWidth: 1000,
+      maxWidth: "100%",
     },
     scanButton: {
       width: 200,
@@ -38,30 +45,65 @@ function useStyles() {
     searchButton: {
       width: 100,
     },
+    resetButton: {
+      width: 125,
+    },
+    sortSelect: {
+      width: 200,
+    },
   };
 }
 
-const Home = () => {
+const SearchPage = () => {
   const styles = useStyles();
   const [scanDialogOpened, setScanDialogOpened] = useState<boolean>(false);
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
-  const [bookDetailsDialogOpened, setBookDetailsDialogOpened] =
-    useState<boolean>(false);
   const [books, setBooks] = useState<BookItem[]>([]);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
-  const [isReset, setIsReset] = useState<boolean>(true);
   const [searchType, setSearchType] = useState<SearchTypeEnum>(
-    SearchTypeEnum.ISBN
+    SearchTypeEnum.TITLE
   );
+  const [sortCriteria, setSortCriteria] = useState<SortCriteriaEnum>(
+    SortCriteriaEnum.NEWEST
+  );
+  const [startIndex, setStartIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+
+  const handleScrollToBottom = async () => {
+    if (isLoading || !hasMore) {
+      return;
+    }
+    setIsLoading(true);
+    const newStartIndex = books.length;
+    const newBooks = await searchBook(
+      searchType,
+      searchKeyword,
+      sortCriteria,
+      newStartIndex
+    );
+    if (newBooks.length > 0) {
+      setBooks([...books, ...newBooks]);
+      setStartIndex(newStartIndex + 10);
+    }
+    setIsLoading(false);
+  };
+
   const handleBarcodeScanned = async (barcodeText: string) => {
     setScannedBarcode(scannedBarcode || barcodeText);
     setSearchType(SearchTypeEnum.ISBN);
     if (barcodeText) {
-      const books = await searchBook(SearchTypeEnum.ISBN, barcodeText);
+      const books = await searchBook(
+        SearchTypeEnum.ISBN,
+        barcodeText,
+        sortCriteria,
+        startIndex
+      );
       console.log(books);
       if (books.length > 0) {
-        setBookDetailsDialogOpened(true);
         setBooks(books);
+        setHasMore(books.length > 0);
       }
     }
   };
@@ -72,17 +114,18 @@ const Home = () => {
   const closeScanDialog = () => {
     setScanDialogOpened(false);
   };
-  const closeBookDetailsDialog = () => {
-    setBookDetailsDialogOpened(false);
-    resetSearch();
-  };
 
   const handleSearchBookByTitleOrKeyword = async () => {
-    const books = await searchBook(searchType, searchKeyword);
+    const books = await searchBook(
+      searchType,
+      searchKeyword,
+      sortCriteria,
+      startIndex
+    );
     console.log(books);
     if (books.length > 0) {
-      setBookDetailsDialogOpened(true);
       setBooks(books);
+      setHasMore(books.length > 0);
     }
   };
 
@@ -90,13 +133,31 @@ const Home = () => {
     setSearchKeyword("");
     setBooks([]);
     setScannedBarcode(null);
-    setIsReset(true);
+  };
+
+  const handleLoadMore = async () => {
+    const newBooks = await searchBook(
+      searchType,
+      searchKeyword,
+      sortCriteria,
+      startIndex + 10
+    );
+    console.log(newBooks);
+    setBooks([...books, ...newBooks]);
+    setStartIndex(startIndex + 10);
+  };
+
+  const handleSearchKeywordChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setSearchKeyword(event.target.value);
+    setStartIndex(0);
   };
 
   return (
-    <div style={styles.root}>
-      <Stack gap="xl">
-        <Title order={2}>My Books</Title>
+    <div>
+      <Stack gap="xl" style={styles.root}>
+        <Title order={2}>Search Our Books</Title>
         <Group align="center">
           <Button
             leftSection={<FiCamera size={16} style={{ marginRight: 1 }} />}
@@ -113,20 +174,23 @@ const Home = () => {
           </Text>
         </Group>
         <Group align="center">
+          <TextInput
+            placeholder="Search by title or keyword"
+            style={styles.searchInput}
+            value={searchKeyword}
+            onChange={handleSearchKeywordChange}
+          />
           <Button
             onClick={handleSearchBookByTitleOrKeyword}
             style={styles.searchButton}
           >
             Search
           </Button>
-          <TextInput
-            placeholder="Search by title or keyword"
-            style={styles.searchInput}
-            value={searchKeyword}
-            onChange={(event) => setSearchKeyword(event.target.value)}
-          />
-          <Group>
-            <Radio.Group>
+          <Radio.Group
+            value={searchType}
+            onChange={(value) => setSearchType(value as SearchTypeEnum)}
+          >
+            <Group>
               <Radio
                 value={SearchTypeEnum.ISBN}
                 label="ISBN"
@@ -137,8 +201,6 @@ const Home = () => {
                 label="Title"
                 onChange={() => setSearchType(SearchTypeEnum.TITLE)}
               />
-            </Radio.Group>
-            <Radio.Group>
               <Radio
                 value={SearchTypeEnum.KEYWORD}
                 label="Keyword"
@@ -149,8 +211,22 @@ const Home = () => {
                 label="Author"
                 onChange={() => setSearchType(SearchTypeEnum.AUTHOR)}
               />
-            </Radio.Group>
-          </Group>
+            </Group>
+          </Radio.Group>
+          <Button onClick={resetSearch} style={styles.resetButton}>
+            Clear Search
+          </Button>
+          <Typography>Sort By:</Typography>
+          <Select
+            data={[
+              { label: "Newest", value: SortCriteriaEnum.NEWEST },
+              { label: "Relevance", value: SortCriteriaEnum.RELEVANCE },
+            ]}
+            placeholder="Sort By"
+            style={styles.sortSelect}
+            value={sortCriteria}
+            onChange={(value) => setSortCriteria(value as SortCriteriaEnum)}
+          />
         </Group>
       </Stack>
       <ScanDialog
@@ -158,14 +234,14 @@ const Home = () => {
         onClose={closeScanDialog}
         onBarcodeScanned={handleBarcodeScanned}
       />
-      <BookDetailsDialog
-        isReset={isReset}
+      <BookDataTable
         books={books}
-        opened={bookDetailsDialogOpened}
-        onClose={closeBookDetailsDialog}
+        handleLoadMore={handleLoadMore}
+        onScrollToBottom={handleScrollToBottom}
+        scrollViewportRef={scrollViewportRef}
       />
     </div>
   );
 };
 
-export default Home;
+export default SearchPage;
