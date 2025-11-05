@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "postinstall": "mkdir -p public/wasm && cp -r node_modules/scanbot-web-sdk/bundle/bin/barcode-scanner/* public/wasm || true"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@mantine/charts": "^8.3.5",
@@ -19,13 +18,13 @@
     "dayjs": "^1.11.18",
     "dotenv": "^17.2.3",
     "feather-icons": "^4.29.2",
+    "html5-qrcode": "^2.3.8",
     "mantine-datatable": "^8.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.9.5",
-    "recharts": "^3.3.0",
-    "scanbot-web-sdk": "7.2.0"
+    "recharts": "^3.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

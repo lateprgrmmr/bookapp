@@ -1,75 +1,96 @@
-import React, { useRef, useEffect, useCallback } from "react";
-import { Modal } from "@mantine/core";
-import type {
-  BarcodeScannerResultWithSize,
-  BarcodeScannerViewConfiguration,
-  IBarcodeScannerHandle,
-} from "scanbot-web-sdk/@types";
-import SBSDKService, { ContainerId } from "../service/SBSDKService";
+import { Button, Modal, Stack } from "@mantine/core";
+import { Html5Qrcode, type Html5QrcodeResult } from "html5-qrcode";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ScanDialogProps {
-  opened: boolean;
+  open: boolean;
   onClose: () => void;
-  onBarcodeScanned?: (barcodeText: string) => void;
+  onBarcodeScanned?: (barcode: string) => void;
 }
 
-export default function ScanDialog(props: ScanDialogProps) {
-  const { opened, onClose, onBarcodeScanned } = props;
-  const handle = useRef<IBarcodeScannerHandle | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [barcodeResult, setBarcodeResult] = React.useState<string | undefined>(
+const ScanDialog = (props: ScanDialogProps) => {
+  const { open, onClose, onBarcodeScanned } = props;
+
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isScanningRef = useRef(false);
+  const [barcodeResult, setBarcodeResult] = useState<string | undefined>(
     undefined
   );
 
-  const onBarcodeDetected = useCallback(
-    (result: BarcodeScannerResultWithSize) => {
-      let text = "";
-      console.log("result", result);
-      result.barcodes.forEach((barcode) => {
-        text += `${barcode.text} (${barcode.format})\n`;
-      });
-      setBarcodeResult(text);
+  const onScanSuccess = useCallback(
+    (decodedText: string, decodedResult: Html5QrcodeResult) => {
+      setBarcodeResult(
+        `${decodedText} (${decodedResult.result.format?.formatName})`
+      );
 
-      if (onBarcodeScanned && result.barcodes.length > 0) {
-        onBarcodeScanned(result.barcodes[0].text);
+      if (onBarcodeScanned) {
+        onBarcodeScanned(decodedText);
       }
 
-      // Close the dialog after successful scan
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(console.error);
+        isScanningRef.current = false;
+      }
+
       setTimeout(() => {
         onClose();
       }, 1000);
     },
-    [onClose, onBarcodeScanned]
+    [onBarcodeScanned, onClose]
   );
 
+  const onScanError = useCallback(() => {
+    // console.error("QR scan error", error);
+  }, []);
+
   useEffect(() => {
-    if (!opened) {
-      handle.current?.dispose();
-      handle.current = null;
+    if (!open) {
+      if (scannerRef.current && isScanningRef.current) {
+        scannerRef.current
+          .stop()
+          .then(() => {
+            scannerRef.current?.clear();
+            isScanningRef.current = false;
+            setBarcodeResult(undefined);
+          })
+          .catch((error) => {
+            console.error("Error stopping scanner", error);
+          });
+      }
+      return;
+    }
+
+    if (isScanningRef.current) {
       return;
     }
 
     const initScanner = async () => {
-      if (!containerRef.current) {
-        console.error("container not found");
-        return;
-      }
-
       try {
-        await SBSDKService.initialize();
+        const scanner = new Html5Qrcode("html5-qrcode-scanner");
+        scannerRef.current = scanner;
 
-        const config: BarcodeScannerViewConfiguration = {
-          containerId: ContainerId.BarcodeScanner,
-          onBarcodesDetected: onBarcodeDetected,
-          detectionParameters: {
-            returnBarcodeImage: true,
-          },
-        };
-
-        handle.current = await SBSDKService.SDK.createBarcodeScanner(config);
-        console.log("Scanbot SDK barcode scanner is ready...");
-      } catch (error) {
-        console.error("failed to initialize scanner...", error);
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          onScanError
+        );
+        isScanningRef.current = true;
+      } catch (err) {
+        console.error("Error initializing scanner", err);
+        try {
+          if (scannerRef.current) {
+            await scannerRef.current.start(
+              { facingMode: "user" },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              onScanSuccess,
+              onScanError
+            );
+            isScanningRef.current = true;
+          }
+        } catch (err2) {
+          console.error("Error starting scanner", err2);
+        }
       }
     };
 
@@ -79,38 +100,34 @@ export default function ScanDialog(props: ScanDialogProps) {
 
     return () => {
       clearTimeout(timer);
-      handle.current?.dispose();
-      handle.current = null;
     };
-  }, [opened, onBarcodeDetected]);
+  }, [open, onScanSuccess, onScanError]);
 
   return (
     <Modal
-      opened={opened}
+      opened={open}
       onClose={onClose}
       title="Scan Barcode"
       size="lg"
       centered
     >
-      <div
-        ref={containerRef}
-        id={ContainerId.BarcodeScanner}
-        style={{
-          width: "100%",
-          height: "500px",
-          position: "relative",
-          minHeight: "500px",
-          backgroundColor: "#000",
-        }}
-      />
-      {barcodeResult && (
+      <Stack>
         <div
-          style={{ marginTop: "1rem", padding: "1rem", background: "#e7f5ff" }}
-        >
-          <strong>Scanned:</strong>
-          <pre>{barcodeResult}</pre>
-        </div>
-      )}
+          id="html5-qrcode-scanner"
+          style={{ width: "100%", height: "100%", position: "relative" }}
+        />
+        {barcodeResult && (
+          <div>
+            <strong>Scanned Barcode:</strong>
+            <pre>{barcodeResult}</pre>
+          </div>
+        )}
+        <Button onClick={onClose} variant="outlined">
+          Cancel
+        </Button>
+      </Stack>
     </Modal>
   );
-}
+};
+
+export default ScanDialog;

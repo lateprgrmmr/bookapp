@@ -230,7 +230,7 @@ const SearchPage = () => {
         </Group>
       </Stack>
       <ScanDialog
-        opened={scanDialogOpened}
+        open={scanDialogOpened}
         onClose={closeScanDialog}
         onBarcodeScanned={handleBarcodeScanned}
       />
