@@ -1,4 +1,15 @@
 services:
+  # api: 
+  #   build: ./
+  #   ports: 
+  #     - '5002:5002'
+  #   depends_on:
+  #     # - recommender
+  #     - postgres
+  # recommender:
+  #   build: ../recommender
+  #   ports:
+  #     - '8001:8001'
   postgres:
     image: postgres:15
     container_name: postgres_db
@@ -13,6 +24,6 @@ services:
       - ./src/database/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
       # - ./src/database/staticData.sql:/docker-entrypoint-initdb.d/2_staticData.sql
       # - ./src/database/scripts/seed.sql:/docker-entrypoint-initdb.d/3_seed.sql
+  # volumes:
+  #   postgres_data:
       # - postgres_data:/var/lib/postgresql/data
-volumes:
-  postgres_data:

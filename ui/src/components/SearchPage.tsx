@@ -21,7 +21,6 @@ import {
   type BookItem,
 } from "../shared/types/book";
 import { useMantineTheme } from "@mantine/core";
-// import BookTable from "./BookTable";
 import BookDataTable from "./BookDataTable";
 
 function useStyles() {
@@ -51,6 +50,9 @@ function useStyles() {
     sortSelect: {
       width: 200,
     },
+    selectBooksButton: {
+      width: 150,
+    },
   };
 }
 
@@ -70,6 +72,7 @@ const SearchPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
 
   const handleScrollToBottom = async () => {
     if (isLoading || !hasMore) {
@@ -132,7 +135,9 @@ const SearchPage = () => {
   const resetSearch = () => {
     setSearchKeyword("");
     setBooks([]);
+    setSelectedBookIds([]);
     setScannedBarcode(null);
+    handleSelectRecordsChange([]);
   };
 
   const handleLoadMore = async () => {
@@ -152,6 +157,15 @@ const SearchPage = () => {
   ) => {
     setSearchKeyword(event.target.value);
     setStartIndex(0);
+  };
+
+  const handleSelectRecordsChange = (recordIds: string[]) => {
+    setSelectedBookIds(recordIds);
+  };
+
+  const handleSelectBooks = () => {
+    alert("pussy ass bitch");
+    console.log(selectedBookIds);
   };
 
   return (
@@ -227,6 +241,14 @@ const SearchPage = () => {
             value={sortCriteria}
             onChange={(value) => setSortCriteria(value as SortCriteriaEnum)}
           />
+          {selectedBookIds.length > 0 && (
+            <Button
+              onClick={handleSelectBooks}
+              style={styles.selectBooksButton}
+            >
+              Add to Library
+            </Button>
+          )}
         </Group>
       </Stack>
       <ScanDialog
@@ -239,6 +261,8 @@ const SearchPage = () => {
         handleLoadMore={handleLoadMore}
         onScrollToBottom={handleScrollToBottom}
         scrollViewportRef={scrollViewportRef}
+        onSelectRecordsChange={handleSelectRecordsChange}
+        selectedBookIds={selectedBookIds}
       />
     </div>
   );

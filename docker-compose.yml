@@ -1,0 +1,32 @@
+# EXAMPLE docker-compose.yml file
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: books
+    ports:
+      - "5433:5432"
+
+  api:
+    build: ./api
+    command: yarn start
+    volumes:
+      - ./api
+    ports:
+      - "5002:5002"
+    depends_on:
+      - db
+      - recommender
+    env_file: .env
+
+  recommender:
+    build: ./recommender
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./recommender:/app
+    ports:
+      - "8001:8001"
