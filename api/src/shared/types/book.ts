@@ -34,7 +34,7 @@ interface AccessInfo {
   };
 }
 
-interface VolumeInfo {
+export interface BookVolumeInfo {
   allowAnonLogging: boolean;
   authors: string[];
   canonicalVolumeLink: string;
@@ -56,7 +56,12 @@ interface VolumeInfo {
   title: string;
 }
 
+export interface BookVolumeInfoReportRecord extends BookVolumeInfo {
+  selected: boolean;
+}
+
 export interface BookItem {
+  selected: boolean;
   accessInfo: AccessInfo;
   etag: string;
   id: string;
@@ -64,7 +69,7 @@ export interface BookItem {
   saleInfo: SaleInfo;
   searchInfo: SearchInfo;
   selfLink: string;
-  volumeInfo: VolumeInfo;
+  volumeInfo: BookVolumeInfo;
 }
 
 interface ReadingModes {
@@ -72,7 +77,7 @@ interface ReadingModes {
   image: boolean;
 }
 
-interface ImageLinks {
+export interface ImageLinks {
   smallThumbnail: string;
   thumbnail: string;
 }
@@ -116,4 +121,15 @@ export const SearchOperatorEnumLookup = {
 export enum SortCriteriaEnum {
   NEWEST = "newest",
   RELEVANCE = "relevance",
+}
+
+export interface BookDataTableRecord {
+  id: string;
+  title: string;
+  author: string;
+  genre: string;
+  summary: string;
+  publishedDate: string;
+  isbn?: string;
+  cover?: string;
 }

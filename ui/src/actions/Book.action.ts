@@ -15,7 +15,7 @@ export const searchBook = async (
     return [];
   }
   const booksResponse = await makeGetRequest<BookResponse>(
-    `/books/search?searchType=${searchType}` +
+    `/book/search?searchType=${searchType}` +
       `&searchQuery=${searchQuery}` +
       `&sortCriteria=${sortCriteria}` +
       `&startIndex=${startIndex}`

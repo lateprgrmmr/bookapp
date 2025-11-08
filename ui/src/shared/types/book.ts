@@ -132,5 +132,4 @@ export interface BookDataTableRecord {
   publishedDate: string;
   isbn?: string;
   cover?: string;
-  // selected: boolean;
 }

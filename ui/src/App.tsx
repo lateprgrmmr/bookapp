@@ -5,6 +5,7 @@ import "@mantine/core/styles.css";
 import HomePage from "./components/HomePage";
 import SearchPage from "./components/SearchPage";
 import Navigation from "./components/Navigation";
+import LibraryPage from "./components/LibraryPage";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/library" element={<LibraryPage />} />
           </Routes>
         </BrowserRouter>
       </MantineProvider>

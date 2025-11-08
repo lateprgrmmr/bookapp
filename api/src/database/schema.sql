@@ -1,11 +1,54 @@
-CREATE TABLE
-    book (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        author VARCHAR(255) NOT NULL,
-        published_date DATE,
-        isbn VARCHAR(13) UNIQUE,
-        pages INT,
-        cover_url VARCHAR(255),
-        language VARCHAR(50)
-    );
+CREATE TYPE user_role_enum AS ENUM ('USER', 'ADMIN');
+CREATE TYPE book_source_enum AS ENUM ('GOOGLE_BOOKS', 'MANUAL_ENTRY');
+
+CREATE TABLE entity (
+    id SERIAL PRIMARY KEY,
+    fname VARCHAR(255) NOT NULL,
+    mname VARCHAR(255),
+    lname VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_profile (
+    id SERIAL PRIMARY KEY,
+    entity_id INT NOT NULL REFERENCES entity (id),
+    role user_role_enum NOT NULL DEFAULT 'USER',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE book (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    data JSONB NOT NULL,
+    source book_source_enum NOT NULL DEFAULT 'GOOGLE_BOOKS',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE library (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES user_profile (id),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE library_book (
+    id SERIAL PRIMARY KEY,
+    library_id INT NOT NULL REFERENCES library (id),
+    book_id INT NOT NULL REFERENCES book (id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_library (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES user_profile (id),
+    library_id INT NOT NULL REFERENCES library (id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

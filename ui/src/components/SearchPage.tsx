@@ -11,7 +11,7 @@ import {
   Select,
   Typography,
 } from "@mantine/core";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiCamera } from "react-icons/fi";
 import ScanDialog from "./ScanDialog";
 import { searchBook } from "../actions/Book.action";
@@ -22,6 +22,10 @@ import {
 } from "../shared/types/book";
 import { useMantineTheme } from "@mantine/core";
 import BookDataTable from "./BookDataTable";
+import CreateEditLibraryDialog from "./CreateEditLibraryDialog";
+import LibraryDialog from "./LibraryDialog";
+import { getLibraries } from "../actions/Library.action";
+import type { LibraryRecord } from "../shared/types/library";
 
 function useStyles() {
   const theme = useMantineTheme();
@@ -53,6 +57,9 @@ function useStyles() {
     selectBooksButton: {
       width: 150,
     },
+    createLibraryButton: {
+      width: 150,
+    },
   };
 }
 
@@ -73,6 +80,21 @@ const SearchPage = () => {
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+  const [createLibraryDialogOpened, setCreateLibraryDialogOpened] =
+    useState<boolean>(false);
+  const [libraryDialogOpened, setLibraryDialogOpened] =
+    useState<boolean>(false);
+  const [libraries, setLibraries] = useState<LibraryRecord[]>([]);
+
+
+  useEffect(() => {
+    const fetchLibraries = async () => {
+      const libraries = await getLibraries();
+      setLibraries(libraries);
+      console.log(libraries);
+    };
+    fetchLibraries();
+  }, []);
 
   const handleScrollToBottom = async () => {
     if (isLoading || !hasMore) {
@@ -118,7 +140,7 @@ const SearchPage = () => {
     setScanDialogOpened(false);
   };
 
-  const handleSearchBookByTitleOrKeyword = async () => {
+  const handleSearch = async () => {
     const books = await searchBook(
       searchType,
       searchKeyword,
@@ -129,6 +151,12 @@ const SearchPage = () => {
     if (books.length > 0) {
       setBooks(books);
       setHasMore(books.length > 0);
+    }
+  };
+
+  const handleKeypress = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      handleSearch();
     }
   };
 
@@ -163,9 +191,22 @@ const SearchPage = () => {
     setSelectedBookIds(recordIds);
   };
 
-  const handleSelectBooks = () => {
-    alert("pussy ass bitch");
-    console.log(selectedBookIds);
+  // const handleSelectBooks = async () => {
+  //   if (selectedBookIds.length === 0) {
+  //     return;
+  //   }
+  //   const selectedBooks = books.filter((book) =>
+  //     selectedBookIds.includes(book.id)
+  //   );
+  //   console.log(selectedBooks);
+  // };
+
+  const handleCreateLibrary = async () => {
+    setLibraryDialogOpened(true);
+  };
+
+  const handleAddLibrary = () => {
+    setCreateLibraryDialogOpened(true);
   };
 
   return (
@@ -193,11 +234,9 @@ const SearchPage = () => {
             style={styles.searchInput}
             value={searchKeyword}
             onChange={handleSearchKeywordChange}
+            onKeyDown={handleKeypress}
           />
-          <Button
-            onClick={handleSearchBookByTitleOrKeyword}
-            style={styles.searchButton}
-          >
+          <Button onClick={handleSearch} style={styles.searchButton}>
             Search
           </Button>
           <Radio.Group
@@ -241,14 +280,12 @@ const SearchPage = () => {
             value={sortCriteria}
             onChange={(value) => setSortCriteria(value as SortCriteriaEnum)}
           />
-          {selectedBookIds.length > 0 && (
-            <Button
-              onClick={handleSelectBooks}
-              style={styles.selectBooksButton}
-            >
-              Add to Library
-            </Button>
-          )}
+          <Button
+            onClick={handleCreateLibrary}
+            style={styles.createLibraryButton}
+          >
+            {`${selectedBookIds.length > 0 ? "Add to" : "Create"} Library`}
+          </Button>
         </Group>
       </Stack>
       <ScanDialog
@@ -263,6 +300,17 @@ const SearchPage = () => {
         scrollViewportRef={scrollViewportRef}
         onSelectRecordsChange={handleSelectRecordsChange}
         selectedBookIds={selectedBookIds}
+      />
+      <LibraryDialog
+        open={libraryDialogOpened}
+        onClose={() => setLibraryDialogOpened(false)}
+        onAddLibrary={handleAddLibrary}
+        libraries={libraries}
+        selectedBookIds={selectedBookIds}
+      />
+      <CreateEditLibraryDialog
+        open={createLibraryDialogOpened}
+        onClose={() => setCreateLibraryDialogOpened(false)}
       />
     </div>
   );
