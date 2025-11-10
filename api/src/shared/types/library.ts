@@ -9,6 +9,10 @@ export interface LibraryRecord {
   updated_at: string;
 }
 
+export interface LibraryUXRecord extends LibraryRecord {
+  book_count: number;
+}
+
 export interface LibraryBookRecord {
   id: string;
   library_id: number;
